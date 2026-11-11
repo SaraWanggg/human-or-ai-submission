@@ -33,8 +33,9 @@
     {
       "recipe": "midpoint",
       "file": "submission_incumbent_stack_50_50.csv",
-      "public_AUROC": null,
-      "source": "Prepared; no score reported."
+      "public_AUROC": 0.98836,
+      "source": "User-reported in chat for the 50/50 incumbent-stack submission; not independently retrieved from Kaggle.",
+      "sha256": "e71096e8b9fbeebfa750d03d5a5cfb320a9fb2d6c18f57e070dcd6b717827de7"
     }
   ]
 }

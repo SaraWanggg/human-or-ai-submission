@@ -4,7 +4,7 @@
 
 **Kaggle team:** Group 13.
 
-This folder contains Justin's selected experiments and portable training/prediction entrypoints for integration into the team submission. The strongest reported submission combines RoBERTa, T5 and Qwen at family weights **20/40/40**, with public AUROC **0.98786**. The logistic stack scored **0.98784**. Both recipes, two other strong blends, and the earlier logistic regression, linear SVM and scratch BiGRU experiments are included.
+This folder contains Justin's selected experiments and portable training/prediction entrypoints for integration into the team submission. The strongest reported submission is the **50/50 probability average of the 20/40/40 RoBERTa/T5/Qwen ensemble and its logistic stack**, with public AUROC **0.98836** (`--recipe midpoint`). Its components scored 0.98786 and 0.98784, respectively. These recipes, two other strong blends, and the earlier logistic regression, linear SVM and scratch BiGRU experiments are included.
 
 The repository contains source, configuration and aggregate results only. Download competition data separately. Model weights, individual predictions, environments and caches are excluded. No script uploads to Kaggle.
 
@@ -106,7 +106,8 @@ Define R, T, Q as follows:
 1. Average the three RoBERTa-base probabilities to get B and the two large probabilities to get L. Then `R = sigmoid(0.5*logit(B) + 0.5*logit(L))`, with probabilities clipped at 1e-12 for this operation.
 2. T is the arithmetic mean of the two T5 probabilities.
 3. Q is the arithmetic mean of the two Qwen probabilities.
-4. The best submission is `0.20*R + 0.40*T + 0.40*Q`.
+4. The original incumbent is `0.20*R + 0.40*T + 0.40*Q`, retained under the historical recipe name `best`.
+5. The current public best is the equal probability average of that incumbent and the logistic stack defined below: `0.5*incumbent + 0.5*stack`, selected with `--recipe midpoint`.
 
 Validate the fixed member recipes on the random holdout:
 
@@ -120,7 +121,7 @@ Train all nine members on all labeled rows, then generate the best submission:
 
 ```bash
 python train.py --train data/train.csv --model ensemble --full --device cuda --cache-dir .hf-cache --out artifacts/ensemble-full
-python predict.py --test data/test.csv --model ensemble --artifacts artifacts/ensemble-full --recipe best --device cuda --cache-dir .hf-cache --out outputs/submission.csv
+python predict.py --test data/test.csv --model ensemble --artifacts artifacts/ensemble-full --recipe midpoint --device cuda --cache-dir .hf-cache --out outputs/submission.csv
 ```
 
 Weights download from Hugging Face on first use. Pinned sources: [RoBERTa-base](https://huggingface.co/FacebookAI/roberta-base) and [RoBERTa-large](https://huggingface.co/FacebookAI/roberta-large) (MIT); [T5-v1.1-base](https://huggingface.co/google/t5-v1_1-base) and [Qwen2.5-1.5B](https://huggingface.co/Qwen/Qwen2.5-1.5B) (Apache 2.0). No external labeled training data, paid classification API or hidden test labels are used. Remote model code execution is disabled. After caching sources, add `--offline` to prevent further downloads.
@@ -132,6 +133,7 @@ Allow several GB for downloads and additional space for fitted members. Nine-mem
 Use the same `artifacts/ensemble-full` directory; training is shared. Only `--recipe` and output filename change:
 
 ```bash
+python predict.py --test data/test.csv --model ensemble --artifacts artifacts/ensemble-full --recipe best --device cuda --cache-dir .hf-cache --out outputs/incumbent.csv
 python predict.py --test data/test.csv --model ensemble --artifacts artifacts/ensemble-full --recipe stack --device cuda --cache-dir .hf-cache --out outputs/stack.csv
 python predict.py --test data/test.csv --model ensemble --artifacts artifacts/ensemble-full --recipe t5-qwen --device cuda --cache-dir .hf-cache --out outputs/t5-qwen.csv
 python predict.py --test data/test.csv --model ensemble --artifacts artifacts/ensemble-full --recipe equal --device cuda --cache-dir .hf-cache --out outputs/equal.csv
@@ -139,13 +141,13 @@ python predict.py --test data/test.csv --model ensemble --artifacts artifacts/en
 
 | Recipe | Definition | Reported public AUROC |
 |---|---|---:|
-| `best` | 20/40/40 R/T/Q | **0.98786** |
+| `midpoint` | Mean of `best` and `stack` predictions | **0.98836** |
+| `best` | 20/40/40 R/T/Q (original incumbent) | 0.98786 |
 | `stack` | Logistic stack of R/T/Q logits | 0.98784 |
 | `t5-qwen` | 0/50/50 | 0.98709 |
 | `equal` | Equal thirds | 0.98641 |
-| `midpoint` | Mean of `best` and `stack` predictions | Not reported |
 
-The public scores were reported by the user after manual uploads; they were not independently fetched. They cover approximately 30% of the test rows; private evaluation uses the remaining 70%. The 0.00002 gap between the top two is too small to establish that one generalizes better. Strong grouped local stack scores did **not** yield a public improvement. Repeated public-score-guided choices also risk fitting the public subset.
+The public scores were reported by the user after manual uploads; they were not independently fetched. They cover approximately 30% of the test rows; private evaluation uses the remaining 70%. The midpoint improved public AUROC by 0.00050 over the incumbent and 0.00052 over the stack. This supports complementary ranking errors on the public subset; it does not establish private-set superiority or statistical significance. The midpoint averaged 0.996282 across four reused grouped development splits (an unweighted mean of AUROCs, not a pooled score), using fold-specific stackers. Strong grouped local stack scores alone did **not** yield a public improvement. Repeated public-score-guided choices also risk fitting the public subset.
 
 The frozen stack formula in `configs/frozen_stack.json` is:
 
