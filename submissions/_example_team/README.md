@@ -1,7 +1,7 @@
-# Kaggle Competition Group 13
+# Example team (template — do not submit this folder)
 
-**Team members:** Sara Wang (sw2529), Jiale Lin (jl4898), Justin Morrill (jm3234)
-**Kaggle team name:** Group 13
+**Team members:** Alice Example (ae123), Bob Example (be456)  
+**Kaggle team name:** `example-team`
 
 ## Setup
 
